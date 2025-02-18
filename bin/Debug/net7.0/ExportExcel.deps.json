@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v7.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v7.0": {
+      "ExportExcel/1.0.0": {
+        "dependencies": {
+          "System.Data.OleDb": "9.0.2"
+        },
+        "runtime": {
+          "ExportExcel.dll": {}
+        }
+      },
+      "System.Data.OleDb/9.0.2": {
+        "runtime": {
+          "lib/netstandard2.0/System.Data.OleDb.dll": {
+            "assemblyVersion": "9.0.0.2",
+            "fileVersion": "9.0.225.6610"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ExportExcel/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "System.Data.OleDb/9.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-7jJf3gmMMV7MF7xe1JgpqjMuMzJ8BrHSqDKALjNKWgW4pWxX4BTbPX/p636Y++jA3FsC57tSu/gvFmyob5+wGQ==",
+      "path": "system.data.oledb/9.0.2",
+      "hashPath": "system.data.oledb.9.0.2.nupkg.sha512"
+    }
+  }
+}

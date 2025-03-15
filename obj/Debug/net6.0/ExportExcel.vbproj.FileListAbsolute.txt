@@ -1,5 +1,0 @@
-C:\Users\manik\source\repos\ExportExcel\obj\Debug\net6.0\ExportExcel.vbproj.AssemblyReference.cache
-C:\Users\manik\source\repos\ExportExcel\obj\Debug\net6.0\ExportExcel.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\manik\source\repos\ExportExcel\obj\Debug\net6.0\ExportExcel.AssemblyInfoInputs.cache
-C:\Users\manik\source\repos\ExportExcel\obj\Debug\net6.0\ExportExcel.AssemblyInfo.vb
-C:\Users\manik\source\repos\ExportExcel\obj\Debug\net6.0\ExportExcel.vbproj.CoreCompileInputs.cache

@@ -1,5 +1,6 @@
 Imports System.Data
 Imports System.Data.OleDb
+Imports System.Globalization
 Imports System.IO
 Imports System.Text.RegularExpressions
 Imports ADOX
@@ -15,20 +16,23 @@ Module Module1
             CreateAccessDatabase(dbPath)
         End If
 
-        ' Make file name as table name and do not ask for entering the name->  ME Holdings_CurrentDate
-        ' 12 exceles and 12 tables 
-        ' Console.Write("Enter the table name: ")
-        'Dim tableName As String = Console.ReadLine().Trim()
         Dim tableName As String = "ME_Holdings"
-        Dim datetableName As String = Path.GetFileNameWithoutExtension(excelPath).Trim().Split(New String() {"ME Holdings File - "}, StringSplitOptions.None).Last()
-        'Dim finalDate As String = datetableName.Substring(11)
-        Dim match As Match = Regex.Match(datetableName, "\d{4}-\d{2}-\d{2}")
+        Dim deletedate As String = Path.GetFileNameWithoutExtension(excelPath).Trim().Split(New String() {"ME Holdings File - "}, StringSplitOptions.None).Last()
+        Dim match As Match = Regex.Match(deletedate, "\d{4}-\d{2}-\d{2}")
         Dim extractedDate As String = If(match.Success, match.Value, "Date not found")
+
+        Dim parsedDate As DateTime = DateTime.ParseExact(extractedDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
+
+        ' Format to MM/dd/yyyy
+        Dim formattedDate As String = parsedDate.ToString("MM/dd/yyyy")
 
         CreateTableFromExcel(dbPath, excelPath, tableName, vbCrLf)
 
-        ' Insert Data into Access
-        InsertDataFromExcel(dbPath, excelPath, tableName, extractedDate)
+        ' Delete Data into Access
+        DeleteDataFromAccessifDuplicate(dbPath, excelPath, tableName, formattedDate)
+        ' Insert from in Excel
+        InsertData(deletedate, excelPath, tableName, dbPath)
+
         Console.WriteLine("Data import completed successfully!")
         Console.ReadLine()
     End Sub
@@ -39,7 +43,6 @@ Module Module1
             ' Step 1: Create an empty Access database if it doesn't exist
             If Not File.Exists(dbPath) Then
                 Dim cat As New Catalog()
-                cat.Create("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath & ";")
                 cat.Create("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath & ";")
                 Console.WriteLine("Database created successfully.")
             End If
@@ -70,7 +73,7 @@ Module Module1
 
                 ' Generate CREATE TABLE statement dynamically
                 Dim primaryKeys As String = "As Of Date ,Port Code "
-                Dim createTableSQL As String = "CREATE TABLE [" & tableName & "] ("  & vbCrLf
+                Dim createTableSQL As String = "CREATE TABLE [" & tableName & "] (" & vbCrLf
 
                 ' Add all columns dynamically
                 For Each col As DataColumn In dt.Columns
@@ -111,91 +114,79 @@ Module Module1
     ' Function to Import Excel Data into Access
 
     ' Step 4: Insert Data into Access Table from Excel
-    Sub InsertDataFromExcel(ByVal dbPath As String, ByVal excelFilePath As String, ByVal tableName As String, ByVal deleteDate As String)
+    Sub DeleteDataFromAccessifDuplicate(ByVal dbPath As String, ByVal excelFilePath As String, ByVal tableName As String, ByVal deleteDate As String)
         Try
-            ' Connect to Excel File
-            Dim excelConnStr As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & excelFilePath & ";Extended Properties='Excel 12.0 Xml;HDR=YES;'"
-            Using excelConn As New OleDbConnection(excelConnStr)
-                excelConn.Open()
 
-                ' Read column names from the first row of the first sheet
-                Dim sheetName As String = GetFirstSheetName(excelConn)
-                Dim sql As String = "SELECT * FROM [" & sheetName & "]"
-                Dim dt As New DataTable()
+            Using accessConn As New OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath)
+                accessConn.Open()
 
-                Using da As New OleDbDataAdapter(sql, excelConn)
-                    da.Fill(dt)
+                Dim deleteSQL As String = "DELETE FROM [" & tableName & "] WHERE [As Of Date] = ?"
+                Using deleteCmd As New OleDbCommand(deleteSQL, accessConn)
+                    deleteCmd.Parameters.AddWithValue("?", deleteDate)
+                    Dim count As Integer = deleteCmd.ExecuteNonQuery()
+                    Console.WriteLine("Delete Number Of Record ", count)
+
                 End Using
+                accessConn.Close()
 
-
-                Using accessConn As New OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath)
-                    accessConn.Open()
-
-                    For Each row As DataRow In dt.Rows
-                        ' Ensure key columns are not null or empty
-                        If String.IsNullOrWhiteSpace(row("As Of Date").ToString()) OrElse
-                               String.IsNullOrWhiteSpace(row("Port Code").ToString()) OrElse
-                               String.IsNullOrWhiteSpace(row("Primary ID").ToString()) Then
-                            Continue For
-                        End If
-
-                        ' Standardize data types (convert to string if needed)
-                        Dim asOfDate As String = row("As Of Date").ToString().Trim()
-                        Dim portCode As String = row("Port Code").ToString().Trim()
-                        Dim primaryID As String = row("Primary ID").ToString().Trim()
-
-                        ' Check if the record exists in Access DB
-                        Dim checkSQL As String = "SELECT COUNT(*) FROM [" & tableName & "] WHERE [As Of Date] = ? OR [Port Code] = ? OR [Primary ID] = ?"
-
-                        Using checkCmd As New OleDbCommand(checkSQL, accessConn)
-                            checkCmd.Parameters.AddWithValue("?", asOfDate)
-                            checkCmd.Parameters.AddWithValue("?", portCode)
-                            checkCmd.Parameters.AddWithValue("?", primaryID)
-
-                            Dim count As Integer = Convert.ToInt32(checkCmd.ExecuteScalar())
-
-                            ' If record exists, delete it before reinserting
-                            If count > 0 Then
-                                Dim deleteSQL As String = "DELETE FROM [" & tableName & "] WHERE [As Of Date] = ? AND [Port Code] = ? AND [Primary ID] = ?"
-                                Using deleteCmd As New OleDbCommand(deleteSQL, accessConn)
-                                    deleteCmd.Parameters.AddWithValue("?", asOfDate)
-                                    deleteCmd.Parameters.AddWithValue("?", portCode)
-                                    deleteCmd.Parameters.AddWithValue("?", primaryID)
-                                    deleteCmd.ExecuteNonQuery()
-                                End Using
-                            End If
-
-                            ' Insert new or updated record
-                            Dim insertSQL As String = "INSERT INTO [" & tableName & "] ("
-                            Dim valuesSQL As String = "VALUES ("
-
-                            ' Dynamically build column names and values
-                            For Each col As DataColumn In dt.Columns
-                                Dim colName As String = col.ColumnName.Trim() ' Trim column names to prevent issues
-                                insertSQL &= "[" & colName & "], "
-                                valuesSQL &= "'" & row(colName).ToString().Replace("'", "''") & "', "
-                            Next
-
-                            insertSQL = insertSQL.TrimEnd(","c, " "c) & ")"
-                            valuesSQL = valuesSQL.TrimEnd(","c, " "c) & ")"
-
-                            ' Final SQL Statement
-                            Dim finalSQL As String = insertSQL & " " & valuesSQL
-
-                            ' Execute the insert command
-                            Using cmd As New OleDbCommand(finalSQL, accessConn)
-                                cmd.ExecuteNonQuery()
-                            End Using
-                        End Using
-                    Next
-
-                    Console.WriteLine("Data updated successfully.")
-                End Using
             End Using
-
             Console.WriteLine("Data updated successfully.")
         Catch ex As Exception
             Console.WriteLine("Error inserting data: " & ex.Message)
         End Try
+    End Sub
+
+
+    Sub InsertData(ByVal deleteDate As String, ByVal excelFilePath As String, ByVal tableName As String, ByVal dbPath As String)
+
+        Dim excelConnStr As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & excelFilePath & ";Extended Properties='Excel 12.0 Xml;HDR=YES;'"
+        Using excelConn As New OleDbConnection(excelConnStr)
+            excelConn.Open()
+
+            ' Read column names from the first row of the first sheet
+            Dim sheetName As String = GetFirstSheetName(excelConn)
+            Dim sql As String = "SELECT * FROM [" & sheetName & "]"
+            Dim dt As New DataTable()
+
+            Using da As New OleDbDataAdapter(sql, excelConn)
+                da.Fill(dt)
+            End Using
+
+            ' Insert new or updated record
+
+            Using accessConn As New OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath)
+                accessConn.Open()
+                ' Dynamically build column names and values
+                For Each row As DataRow In dt.Rows
+                    Dim insertSQL As String = "INSERT INTO [" & tableName & "] ("
+                    Dim valuesSQL As String = "VALUES ("
+                    For Each col As DataColumn In dt.Columns
+                        Dim colName As String = col.ColumnName.Trim() ' Trim column names to prevent issues
+                        insertSQL &= "[" & colName & "], "
+                        If (colName = "As Of Date") Then
+                            valuesSQL &= "'" & deleteDate.ToString().Replace("'", "''") & "', "
+                        Else
+                            valuesSQL &= "'" & row(colName).ToString().Replace("'", "''") & "', "
+
+                        End If
+                    Next
+
+                    insertSQL = insertSQL.TrimEnd(","c, " "c) & ")"
+                    valuesSQL = valuesSQL.TrimEnd(","c, " "c) & ")"
+                    ' Final SQL Statement
+                    Dim finalSQL As String = insertSQL & " " & valuesSQL
+
+                    ' Execute the insert command
+                    Using cmd As New OleDbCommand(finalSQL, accessConn)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                Next
+
+
+
+
+                Console.WriteLine("Data updated successfully.")
+            End Using
+        End Using
     End Sub
 End Module

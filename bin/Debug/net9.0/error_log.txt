@@ -1,0 +1,23 @@
+3/20/2025 6:50:15 PM - System.Data.OleDb.OleDbException (0x80040E14): Table 'ME_Holdings' already exists.
+   at System.Data.OleDb.OleDbCommand.ExecuteCommandTextErrorHandling(OleDbHResult hr)
+   at System.Data.OleDb.OleDbCommand.ExecuteCommandTextForSingleResult(tagDBPARAMS dbParams, Object& executeResult)
+   at System.Data.OleDb.OleDbCommand.ExecuteCommandText(Object& executeResult)
+   at System.Data.OleDb.OleDbCommand.ExecuteCommand(CommandBehavior behavior, Object& executeResult)
+   at System.Data.OleDb.OleDbCommand.ExecuteReaderInternal(CommandBehavior behavior, String method)
+   at System.Data.OleDb.OleDbCommand.ExecuteNonQuery()
+   at ExportExcel.Module1.CreateTableFromExcel(String dbPath, String excelFilePath, String tableName, String vbCrLf) in C:\Users\manik\source\repos\ExportExcel\Program.vb:line 105
+3/20/2025 6:52:25 PM - System.Data.OleDb.OleDbException (0x80040E10): No value given for one or more required parameters.
+   at System.Data.OleDb.OleDbCommand.ExecuteCommandText(Object& executeResult)
+   at System.Data.OleDb.OleDbCommand.ExecuteReaderInternal(CommandBehavior behavior, String method)
+   at System.Data.OleDb.OleDbCommand.ExecuteNonQuery()
+   at ExportExcel.Module1.UpdateAddedColumns(String dbPath, String tableName, List`1 columnNames, String specificdate) in C:\Users\manik\source\repos\ExportExcel\Program.vb:line 369
+3/20/2025 6:58:12 PM - System.Data.OleDb.OleDbException (0x80040E10): No value given for one or more required parameters.
+   at System.Data.OleDb.OleDbCommand.ExecuteCommandText(Object& executeResult)
+   at System.Data.OleDb.OleDbCommand.ExecuteReaderInternal(CommandBehavior behavior, String method)
+   at System.Data.OleDb.OleDbCommand.ExecuteNonQuery()
+   at ExportExcel.Module1.UpdateAddedColumns(String dbPath, String tableName, List`1 columnNames, String specificdate) in C:\Users\manik\source\repos\ExportExcel\Program.vb:line 369
+3/20/2025 10:46:32 PM - System.Data.OleDb.OleDbException (0x80040E10): No value given for one or more required parameters.
+   at System.Data.OleDb.OleDbCommand.ExecuteCommandText(Object& executeResult)
+   at System.Data.OleDb.OleDbCommand.ExecuteReaderInternal(CommandBehavior behavior, String method)
+   at System.Data.OleDb.OleDbCommand.ExecuteNonQuery()
+   at ExportExcel.Module1.UpdateAddedColumns(String dbPath, String tableName, List`1 columnNames, String specificdate) in C:\Users\manik\source\repos\ExportExcel\Program.vb:line 368

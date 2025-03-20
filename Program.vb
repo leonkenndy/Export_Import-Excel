@@ -1,4 +1,4 @@
-Imports System.Data
+﻿Imports System.Data
 Imports System.Data.OleDb
 Imports System.Globalization
 Imports System.IO
@@ -31,8 +31,20 @@ Module Module1
         ' Delete Data into Access
         DeleteDataFromAccessifDuplicate(dbPath, excelPath, tableName, formattedDate)
         ' Insert from in Excel
-        InsertData(deletedate, excelPath, tableName, dbPath)
+        InsertData(formattedDate, excelPath, tableName, dbPath)
 
+        'Adding Columns to DataBase
+        Dim columnsToAdd As New List(Of String) From {
+                                                        "SRRe Asset Funding",
+                                                        "SRRe Asset Category",
+                                                        "SRRe Asset Type",
+                                                        "SRRe Asset Subtype",
+                                                        "SRRe Letter Rating"
+                                                        }
+
+        AddColumnsToAccessTable(dbPath, tableName, columnsToAdd)
+
+        UpdateAddedColumns(dbPath, tableName, columnsToAdd, formattedDate)
         Console.WriteLine("Data import completed successfully!")
         Console.ReadLine()
     End Sub
@@ -97,6 +109,9 @@ Module Module1
                 Console.WriteLine("Table 'Employees' created successfully from Excel headers.")
 
             End Using
+        Catch ex As OleDbException
+            ' Logs specific OleDb SQL error
+            Console.WriteLine("Database Error: " & ex.Message)
         Catch ex As Exception
             Console.WriteLine("Error: " & ex.Message)
         End Try
@@ -120,7 +135,7 @@ Module Module1
             Using accessConn As New OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath)
                 accessConn.Open()
 
-                Dim deleteSQL As String = "DELETE FROM [" & tableName & "] WHERE [As Of Date] = ?"
+                Dim deleteSQL As String = "DELETE FROM [" & tableName & "] WHERE [As Of Date] = ? "
                 Using deleteCmd As New OleDbCommand(deleteSQL, accessConn)
                     deleteCmd.Parameters.AddWithValue("?", deleteDate)
                     Dim count As Integer = deleteCmd.ExecuteNonQuery()
@@ -136,7 +151,6 @@ Module Module1
         End Try
     End Sub
 
-
     Sub InsertData(ByVal deleteDate As String, ByVal excelFilePath As String, ByVal tableName As String, ByVal dbPath As String)
 
         Dim excelConnStr As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & excelFilePath & ";Extended Properties='Excel 12.0 Xml;HDR=YES;'"
@@ -145,7 +159,7 @@ Module Module1
 
             ' Read column names from the first row of the first sheet
             Dim sheetName As String = GetFirstSheetName(excelConn)
-            Dim sql As String = "SELECT * FROM [" & sheetName & "]"
+            Dim sql As String = "SELECT * FROM [" & sheetName & "] WHERE [Asset Category] IS NOT NULL AND [As Of Date] IS NOT NULL"
             Dim dt As New DataTable()
 
             Using da As New OleDbDataAdapter(sql, excelConn)
@@ -189,4 +203,150 @@ Module Module1
             End Using
         End Using
     End Sub
+
+    Sub AddColumnsToAccessTable(ByVal dbPath As String, ByVal tableName As String, ByVal columnNames As List(Of String))
+        ' Connection string
+        Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
+
+        Using conn As New OleDbConnection(connectionString)
+            Try
+                conn.Open()
+
+                For Each columnName As String In columnNames
+                    ' SQL command to add column
+                    Dim sql As String = "ALTER TABLE [" & tableName & "] ADD COLUMN [" & columnName & "] TEXT(50);"
+
+                    Using cmd As New OleDbCommand(sql, conn)
+                        cmd.ExecuteNonQuery()
+                        Console.WriteLine("Column '" & columnName & "' added successfully!")
+                    End Using
+                Next
+
+            Catch ex As Exception
+                Console.WriteLine("Error: " & ex.Message)
+            End Try
+        End Using
+    End Sub
+
+
+    Sub UpdateAddedColumns(ByVal dbPath As String, ByVal tableName As String, ByVal columnNames As List(Of String), ByVal specificdate As String)
+        Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
+
+        Using conn As New OleDbConnection(connectionString)
+            Try
+                conn.Open()
+                For Each columnName As String In columnNames
+                    Dim sql As String = ""
+                    Dim sql2 As String = ""
+                    Dim sql3 As String = ""
+
+                    If columnName = "SRRe Asset Funding" Then
+                        sql = "UPDATE [" & tableName & "] " &
+                              "SET [" & columnName & "] = IIF([Asset Category] = 'Unfunded', 'Unfunded', 'Funded') " &
+                              "WHERE [Asset Category] IS NOT NULL AND [As Of Date] IS NOT NULL;"
+                    ElseIf columnName = "SRRe Asset Category" Then
+                        'TODO infomation in excel seems incomplete
+                        sql = "UPDATE [" & tableName & "] " &
+                              "SET  [" & columnName & "] = " &
+                              "IIf([Asset Type] IN ('IG Corp Public', 'Non IG Corp Public', 'Syndicated Bank Loans'), 'Corp Sec Public', " &
+                              "IIf([Asset Type] IN ('IG Corp Non Public', 'Non-IG Corp Non Public', 'Commercial Mortgage Loans', 'Collateral Loans'), 'Private Credit', " &
+                              "IIf([Asset Type] = 'Preferred Stock', 'Preferred Stock', " &
+                              "IIf([Asset Type] = 'Direct Investments', 'Non-Fixed Income', " &
+                              "IIf([Asset Type] IN ('CLO', 'ABS', 'CMBS', 'RMBS'), 'Structured Credit', [Asset Category])" &
+                              ")))) " &
+                              "WHERE [Asset Type] IS NOT NULL;"
+                    ElseIf columnName = "SRRe Asset Type" Then
+                        'TODO: its not Private Placement  its Private Placement Ind
+                        sql = "UPDATE [" & tableName & "] " &
+                          "SET [" & columnName & "] = " &
+                          "IIF([Asset Type] = 'IG Corp Public' OR [Asset Type] = 'Non-IG Corp Public', 'Corp Sec Public', " &
+                          "IIF(([Asset Type] = 'IG Corp Non Public' OR [Asset Type] = 'Non-IG Corp Non Public') AND [Private Placement Ind] = 'No', 'Corp Sec Private', " &
+                          "IIF(([Asset Type] = 'IG Corp Non Public' OR [Asset Type] = 'Non-IG Corp Non Public') AND [Private Placement Ind] = 'Yes', 'Corp Sec 144a', " &
+                          "[Asset Type])))" &
+                          "WHERE [Asset Category] IS NOT NULL " &
+                          "AND [As Of Date] IS NOT NULL;"
+                    ElseIf columnName = "SRRe Asset Subtype" Then
+                        sql = "UPDATE [" & tableName & "] " &
+                          "SET [" & columnName & "] = " &
+                          "IIF([Asset Subtype] = 'IG Corp Public' OR [Asset Subtype] = 'Non-IG Corp Public', 'Corp Sec Public', " &
+                          "IIF(([Asset Subtype] = 'IG Corp Non Public' OR [Asset Subtype] = 'Non-IG Corp Non Public') AND [Private Placement Ind] = 'No', 'Corp Sec Private', " &
+                          "IIF(([Asset Subtype] = 'IG Corp Non Public' OR [Asset Subtype] = 'Non-IG Corp Non Public') AND [Private Placement Ind] = 'Yes', 'Corp Sec 144a', " &
+                          "[Asset Subtype])))" &
+                          "WHERE [Asset Category] IS NOT NULL " &
+                          "AND [As Of Date] IS NOT NULL;"
+                        'Still Pending 
+                    ElseIf columnName = "SRRe Letter Rating" Then
+                        sql = "UPDATE [" & tableName & "] SET [" & columnName & "] = " &
+                                "SWITCH(" &
+                                "Trim([NRSRO Rating])='AAA', 'AAA', " &
+                                "[NRSRO Rating] IN ('AA+', 'AA', 'AA-'), 'AA', " &
+                                "[NRSRO Rating] IN ('A+', 'A', 'A-'), 'A', " &
+                                "[NRSRO Rating] IN ('BBB+', 'BBB', 'BBB-'), 'BBB', " &
+                                "[NRSRO Rating] IN ('BB+', 'BB', 'BB-'), 'BB', " &
+                                "[NRSRO Rating] IN ('B+', 'B', 'B-'), 'B', " &
+                                "[NRSRO Rating] IN ('CCC+', 'CCC', 'CCC-'), 'CCC', " &
+                                "[NRSRO Rating] IN ('CC+', 'CC', 'CC-'), 'CC', " &
+                                "[NRSRO Rating] IN ('C+', 'C', 'C-'), 'C', " &
+                                "[NRSRO Rating]='D', 'D', " &
+                                "True, NULL)"
+                        sql2 = "UPDATE [" & tableName & "] SET [" & columnName & "] = " &
+                                "SWITCH(" &
+                                "Trim([BSCR Rating])='1','AAA'," &
+                                "Trim([BSCR Rating])='2', 'AA', " &
+                                "Trim([BSCR Rating])='3', 'A', " &
+                                "Trim([BSCR Rating])='4', 'BBB', " &
+                                "Trim([BSCR Rating])='5', 'BB', " &
+                                "Trim([BSCR Rating])='6', 'B', " &
+                                "Trim([BSCR Rating])='7', 'CCC', " &
+                                "Trim([BSCR Rating])='8', 'NR', " &
+                                "True, [" & columnName & "]) " &
+                                "WHERE [" & columnName & "] IS NULL AND [BSCR Rating] IS NOT NULL ;"
+                        sql3 = "UPDATE [" & tableName & "] " &
+                                "SET [" & columnName & "] = " &
+                                "SWITCH( " &
+                                "Trim([CM])= 'CM1' , 'AAA', " &
+                                "Trim([CM])=  'CM2' , 'BBB', " &
+                                "Trim([CM])=  'CM3' , 'BB', " &
+                                "Trim([CM])=  'CM4' , 'B', " &
+                                "Trim([CM])=  'CM5' , 'CCC', " &
+                                "Trim([CM])=  'CM6' , 'CC' " &
+                                ") " &
+                                "WHERE [" & columnName & "] IS NULL OR [BSCR Rating] IS NULL AND [CM] IS NOT NULL;"
+
+                    End If
+
+                    ' Execute only if SQL is not empty
+                    If sql <> "" Then
+                        Using cmd As New OleDbCommand(sql, conn)
+                            Dim rowsAffected As Integer = cmd.ExecuteNonQuery()
+                            Console.WriteLine("Executing 1st SQL: " & vbCrLf & sql)
+                            Console.WriteLine($"{columnName}: {rowsAffected} rows updated successfully!")
+                        End Using
+                    End If
+                    If sql2 <> "" Then
+                        Using cmd As New OleDbCommand(sql2, conn)
+                            Dim rowsAffected As Integer = cmd.ExecuteNonQuery()
+                            Console.WriteLine("Executing 2nd SQL: " & vbCrLf & sql2)
+                            Console.WriteLine($"{columnName}: {rowsAffected} rows updated successfully!")
+                        End Using
+                    End If
+                    If sql3 <> "" Then
+                        Using cmd As New OleDbCommand(sql3, conn)
+                            Dim rowsAffected As Integer = cmd.ExecuteNonQuery()
+                            Console.WriteLine("Executing 3rd SQL: " & vbCrLf & sql3)
+                            Console.WriteLine($"{columnName}: {rowsAffected} rows updated successfully!")
+                        End Using
+                    End If
+                Next
+            Catch ex As OleDbException
+                ' Log General Error Message
+                Console.WriteLine("OleDb Database Error: " & ex.Message)
+            Catch ex As Exception
+                ' General Error Logging
+                Console.WriteLine("General Error: " & ex.Message)
+
+            End Try
+        End Using
+    End Sub
+
 End Module

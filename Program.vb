@@ -39,7 +39,9 @@ Module Module1
                                                         "SRRe Asset Category",
                                                         "SRRe Asset Type",
                                                         "SRRe Asset Subtype",
-                                                        "SRRe Letter Rating"
+                                                        "SRRe Letter Rating",
+                                                        "IG",
+                                                        "Coloum"
                                                         }
 
         AddColumnsToAccessTable(dbPath, tableName, columnsToAdd)
@@ -313,8 +315,23 @@ Module Module1
                                 ") " &
                                 "WHERE [" & columnName & "] IS NULL OR [BSCR Rating] IS NULL AND [CM] IS NOT NULL;"
 
-                    End If
 
+                    ElseIf columnName = "IG" Then
+                        sql = "UPDATE [" & tableName & "] " &
+                               "SET [" & columnName & "] = " &
+                               "SWITCH( " &
+                               "Trim([SRRe Letter Rating])= 'AAA' , 'IG = Investment Grade', " &
+                               "Trim([SRRe Letter Rating])= 'AA' , 'IG = Investment Grade', " &
+                               "Trim([SRRe Letter Rating])= 'A' , 'IG = Investment Grade', " &
+                               "Trim([SRRe Letter Rating])=  'BBB' , 'IG = Investment Grade', " &
+                               "Trim([SRRe Letter Rating])=  'BB' , 'BIG = Below Investment Grade', " &
+                               "Trim([SRRe Letter Rating])=  'B' , 'BIG = Below Investment Grade', " &
+                               "Trim([SRRe Letter Rating])=  'CCC' , 'BIG = Below Investment Grade', " &
+                               "Trim([SRRe Letter Rating])=  'C' , 'BIG = Below Investment Grade' " &
+                               ") " &
+                               "WHERE [" & columnName & "] IS NULL OR [SRRe Letter Rating] IS NOT NULL;"
+
+                    End If
                     ' Execute only if SQL is not empty
                     If sql <> "" Then
                         Using cmd As New OleDbCommand(sql, conn)

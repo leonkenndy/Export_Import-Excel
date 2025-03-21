@@ -1,8 +1,12 @@
 ﻿Imports System.Data
 Imports System.Data.OleDb
+Imports System.Diagnostics.Metrics
 Imports System.Globalization
 Imports System.IO
+Imports System.IO.Pipelines
+'Imports System.Net.WebRequestMethods
 Imports System.Text.RegularExpressions
+Imports System.Threading
 Imports ADOX
 
 
@@ -39,14 +43,137 @@ Module Module1
                                                         "SRRe Asset Category",
                                                         "SRRe Asset Type",
                                                         "SRRe Asset Subtype",
-                                                        "SRRe Letter Rating",
-                                                        "IG",
-                                                        "Coloum"
+                                                        "SRRe Rating Letter",
+                                                        "SRRe IG",
+                                                        "SRRe Rating Number",
+                                                        "SRRe Port Code"
                                                         }
 
         AddColumnsToAccessTable(dbPath, tableName, columnsToAdd)
 
         UpdateAddedColumns(dbPath, tableName, columnsToAdd, formattedDate)
+        'pacwest
+        'Update pacwest
+        'If Primary ID = 68295@AA7, 35116@AA3, 35092*AA3, 81800*AA0, 81786*AA8, 16325#AA8, 19418@AA2, 74744#AA0, 90282*AA8
+
+        'SRRe Asset Funding = Funded
+
+        'SRRe Asset Category = Private Credit
+
+        'SRRE Asset Type = Construction Loan
+
+        'SRRE Asset Subtype = Construction Loan
+
+        'SRRE Letter Rating = BBB
+
+        'SRRE Letter Number = 4
+
+
+
+        'If Primary Then ID = 68295@AA7U, 35116@AA3U, 35092*AA3U, 81800*AA0U, 81786*AA8U, 16325#AA8U, 19418@AA2U, 74744#AA0U, 90282*AA8U
+
+        'SRRE Asset Funding = Unfunded
+
+        'SRRE Asset Category = Private Credit
+
+        'SRRE Asset Type = Construction Loan
+
+        'SRRE Asset Subtype = Construction Loan
+
+        'SRRE Rating Letter = BBB
+
+        'SRRE Rating Number = 4
+
+
+        'Report generation to a blank file I'll make it optional 
+
+        'Make report in Excel
+
+        '        IG Corp Public 
+        'D16 -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = Corp Sec Public
+        'SRRe IG = IG
+        'As of Date = ME_Holding_File date
+
+        'IG Corp Non Public
+        'D17 -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = Corp Sec Private
+        'SRRe IG = IG
+        'Date = ME_Holding_File Date
+        'D15 = D16 + D17
+
+        '        IG Corp Public 
+        'D20 -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = Corp Sec Public
+        'SRRe IG = BIG
+        'Date = ME_Holding_File Date
+
+        'IG Corp Non Public
+        'D21 -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = Corp Sec Private
+        'SRRe IG = BIG
+        'Date = ME_Holding_File Date
+        'D19 = D20 + D21
+
+
+        '        Column E Is with port code as OC 
+        'D21 -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = OC
+        'SRRe Asset Type = Corp Sec Private
+        'SRRe IG = BIG
+        'Date = ME_Holding_File Date
+        'D19 = D20 + D21
+
+
+        '        IG CLOs 
+
+        ' -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = CLO
+        'SRRe IG = IG
+        'Date = ME_Holding_File Date
+
+        'Non IG CLOs 
+
+        ' -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = CLO
+        'SRRe IG = BIG
+        'Date = ME_Holding_File Date
+
+        'CLOS -> Sum of Stat Carry Value 4 Condition 
+        'when 
+        'SRRe Port Code = FWH
+        'SRRe Asset Type = CLO
+        'Date = ME_Holding_File Date
+
+
+        'Dont Check SRRe IG for 
+        'Commercial paper 
+        'Collateral loans 
+        'syndicated bank loans 
+        'ABS
+        '        CMBS
+        '        RMBS
+        '        Direct Investments 
+        'Preferred Stock 
+
+
+        'Accrued Interest 
+        'Add them based on 
+        'ME_holding files date
+        'FWH/ OC 
         Console.WriteLine("Data import completed successfully!")
         Console.ReadLine()
     End Sub
@@ -277,7 +404,7 @@ Module Module1
                           "WHERE [Asset Category] IS NOT NULL " &
                           "AND [As Of Date] IS NOT NULL;"
                         'Still Pending 
-                    ElseIf columnName = "SRRe Letter Rating" Then
+                    ElseIf columnName = "SRRe Rating Letter" Then
                         sql = "UPDATE [" & tableName & "] SET [" & columnName & "] = " &
                                 "SWITCH(" &
                                 "Trim([NRSRO Rating])='AAA', 'AAA', " &
@@ -315,23 +442,54 @@ Module Module1
                                 ") " &
                                 "WHERE [" & columnName & "] IS NULL OR [BSCR Rating] IS NULL AND [CM] IS NOT NULL;"
 
-
-                    ElseIf columnName = "IG" Then
+                    ElseIf columnName = "SRRe IG" Then
                         sql = "UPDATE [" & tableName & "] " &
                                "SET [" & columnName & "] = " &
                                "SWITCH( " &
-                               "Trim([SRRe Letter Rating])= 'AAA' , 'IG = Investment Grade', " &
-                               "Trim([SRRe Letter Rating])= 'AA' , 'IG = Investment Grade', " &
-                               "Trim([SRRe Letter Rating])= 'A' , 'IG = Investment Grade', " &
-                               "Trim([SRRe Letter Rating])=  'BBB' , 'IG = Investment Grade', " &
-                               "Trim([SRRe Letter Rating])=  'BB' , 'BIG = Below Investment Grade', " &
-                               "Trim([SRRe Letter Rating])=  'B' , 'BIG = Below Investment Grade', " &
-                               "Trim([SRRe Letter Rating])=  'CCC' , 'BIG = Below Investment Grade', " &
-                               "Trim([SRRe Letter Rating])=  'C' , 'BIG = Below Investment Grade' " &
+                               "Trim([SRRe Rating Letter])= 'AAA' , 'IG', " &
+                               "Trim([SRRe Rating Letter])= 'AA' , 'IG', " &
+                               "Trim([SRRe Rating Letter])= 'A' , 'IG', " &
+                               "Trim([SRRe Rating Letter])=  'BBB' , 'IG', " &
+                               "Trim([SRRe Rating Letter])=  'BB' , 'BIG', " &
+                               "Trim([SRRe Rating Letter])=  'B' , 'BIG', " &
+                               "Trim([SRRe Rating Letter])=  'CCC' , 'BIG', " &
+                               "Trim([SRRe Rating Letter])= 'CC' , 'BIG', " &
+                               "Trim([SRRe Rating Letter])=  'C' , 'BIG' " &
                                ") " &
-                               "WHERE [" & columnName & "] IS NULL OR [SRRe Letter Rating] IS NOT NULL;"
-
+                               "WHERE [" & columnName & "] IS NULL OR [SRRe Rating Letter] IS NOT NULL;"
+                    ElseIf columnName = "SRRe Rating Number" Then
+                        sql = "UPDATE [" & tableName & "] " &
+                               "SET [" & columnName & "] = " &
+                               "SWITCH( " &
+                               "Trim([SRRe Rating Letter])= 'AAA' , '1', " &
+                               "Trim([SRRe Rating Letter])= 'AA' , '2', " &
+                               "Trim([SRRe Rating Letter])= 'A' , '3', " &
+                               "Trim([SRRe Rating Letter])=  'BBB' , '4', " &
+                               "Trim([SRRe Rating Letter])=  'BB' , '5', " &
+                               "Trim([SRRe Rating Letter])=  'B' , '6', " &
+                               "Trim([SRRe Rating Letter])=  'CCC' , '7', " &
+                                "Trim([SRRe Rating Letter])= 'CC' , '8', " &
+                               "Trim([SRRe Rating Letter])=  'C' , '9' " &
+                               ") " &
+                               "WHERE [" & columnName & "] IS NULL OR [SRRe Rating Letter] IS NOT NULL;"
+                    ElseIf columnName = "SRRe Port Code" Then
+                        sql = "UPDATE [" & tableName & "] " &
+                               "SET [" & columnName & "] = " &
+                               "SWITCH( " &
+                               "Trim([Port Code])= '811' , 'FWH', " &
+                               "Trim([Port Code])= '812' , 'OC', " &
+                               "Trim([Port Code])= '813' , 'FWH', " &
+                               "Trim([Port Code])= '814' , 'FWH', " &
+                               "Trim([Port Code])= '815' , 'FWH', " &
+                               "Trim([Port Code])= '816' , 'FWH', " &
+                               "Trim([Port Code])= '817' , 'OC', " &
+                               "Trim([Port Code])= '821' , 'OC', " &
+                               "Trim([Port Code])= '823' , 'OC' " &
+                               ") " &
+                               "WHERE [" & columnName & "] IS NULL OR [Port Code] IS NOT NULL;"
                     End If
+
+
                     ' Execute only if SQL is not empty
                     If sql <> "" Then
                         Using cmd As New OleDbCommand(sql, conn)

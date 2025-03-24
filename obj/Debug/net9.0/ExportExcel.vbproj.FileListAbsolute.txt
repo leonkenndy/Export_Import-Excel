@@ -26,3 +26,11 @@ C:\Users\manik\source\repos\ExportExcel\obj\Debug\net9.0\refint\ExportExcel.dll
 C:\Users\manik\source\repos\ExportExcel\obj\Debug\net9.0\ExportExcel.pdb
 C:\Users\manik\source\repos\ExportExcel\obj\Debug\net9.0\ExportExcel.genruntimeconfig.cache
 C:\Users\manik\source\repos\ExportExcel\obj\Debug\net9.0\ref\ExportExcel.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\ClosedXML.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\ClosedXML.Parser.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\DocumentFormat.OpenXml.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\ExcelNumberFormat.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\RBush.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\SixLabors.Fonts.dll
+C:\Users\manik\source\repos\ExportExcel\bin\Debug\net9.0\System.IO.Packaging.dll

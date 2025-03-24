@@ -14,6 +14,7 @@ Module Module1
     Sub Main()
         Dim excelPath As String = "C:\Users\manik\Downloads\ME Holdings File - 2024-11-30 - Skyridge.xlsx"
         Dim dbPath As String = "D:\ME Holdings.accdb"
+        Dim excelReportPath As String = "D:\ME_Holdings.xlsx"
 
         ' Create Access DB if not exists
         If Not File.Exists(dbPath) Then
@@ -54,36 +55,9 @@ Module Module1
         UpdateAddedColumns(dbPath, tableName, columnsToAdd, formattedDate)
         'pacwest
         'Update pacwest
-        'If Primary ID = 68295@AA7, 35116@AA3, 35092*AA3, 81800*AA0, 81786*AA8, 16325#AA8, 19418@AA2, 74744#AA0, 90282*AA8
-
-        'SRRe Asset Funding = Funded
-
-        'SRRe Asset Category = Private Credit
-
-        'SRRE Asset Type = Construction Loan
-
-        'SRRE Asset Subtype = Construction Loan
-
-        'SRRE Letter Rating = BBB
-
-        'SRRE Letter Number = 4
-
-
-
-        'If Primary Then ID = 68295@AA7U, 35116@AA3U, 35092*AA3U, 81800*AA0U, 81786*AA8U, 16325#AA8U, 19418@AA2U, 74744#AA0U, 90282*AA8U
-
-        'SRRE Asset Funding = Unfunded
-
-        'SRRE Asset Category = Private Credit
-
-        'SRRE Asset Type = Construction Loan
-
-        'SRRE Asset Subtype = Construction Loan
-
-        'SRRE Rating Letter = BBB
-
-        'SRRE Rating Number = 4
-
+        Dim primaryIDList1 As New List(Of String) From {"68295@AA7", "35116@AA3", "35092*AA3", "81800*AA0", "81786*AA8", "16325#AA8", "19418@AA2", "74744#AA0", "90282*AA8"}
+        Dim primaryIDList2 As New List(Of String) From {"68295@AA7U", "35116@AA3U", "35092*AA3U", "81800*AA0U", "81786@AA8U", "16325#AA8U", "19418@AA2U", "74744#AA0U", "90282*AA8U"}
+        Updatepacwest(dbPath, tableName, primaryIDList1, primaryIDList2)
 
         'Report generation to a blank file I'll make it optional 
 
@@ -174,6 +148,10 @@ Module Module1
         'Add them based on 
         'ME_holding files date
         'FWH/ OC 
+
+        Dim report As New ReportGenerator(dbPath, tableName, excelReportPath, formattedDate)
+        report.GenerateReportFWH()
+        'report.GenerateReportOC()
         Console.WriteLine("Data import completed successfully!")
         Console.ReadLine()
     End Sub
@@ -523,5 +501,58 @@ Module Module1
             End Try
         End Using
     End Sub
+
+    Public Sub Updatepacwest(ByVal dbPath As String, ByVal tableName As String, primaryID1 As List(Of String), primaryID2 As List(Of String))
+        Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
+
+        Using conn As New OleDbConnection(connectionString)
+            Try
+                conn.Open()
+
+                Dim combinedSQLs As New List(Of String)()
+
+                ' ---- First Primary ID List - Funded ----
+                If primaryID1 IsNot Nothing AndAlso primaryID1.Count > 0 Then
+                    Dim formattedIDs As String = String.Join(", ", primaryID1.Select(Function(id) "'" & id & "'"))
+                    Dim whereClause As String = "WHERE [Primary ID] IN (" & formattedIDs & ")"
+                    Dim sql1 As String = "UPDATE [" & tableName & "] " &
+                        "SET [SRRe Asset Funding] = 'Funded', " &
+                        "[SRRe Asset Category] = 'Private Credit', " &
+                        "[SRRe Asset Type] = 'Construction Loan', " &
+                        "[SRRe Asset Subtype] = 'Construction Loan', " &
+                        "[SRRE Rating Letter] = 'BBB', " &
+                        "[SRRE Rating Number] = '4' " & whereClause & ";"
+                    combinedSQLs.Add(sql1)
+                End If
+
+                ' ---- Second Primary ID List - Unfunded ----
+                If primaryID2 IsNot Nothing AndAlso primaryID2.Count > 0 Then
+                    Dim formattedIDs As String = String.Join(", ", primaryID2.Select(Function(id) "'" & id & "'"))
+                    Dim whereClause As String = "WHERE [Primary ID] IN (" & formattedIDs & ")"
+                    Dim sql2 As String = "UPDATE [" & tableName & "] " &
+                        "SET [SRRe Asset Funding] = 'Unfunded', " &
+                        "[SRRe Asset Category] = 'Private Credit', " &
+                        "[SRRe Asset Type] = 'Construction Loan', " &
+                        "[SRRe Asset Subtype] = 'Construction Loan', " &
+                        "[SRRE Rating Letter] = 'BBB', " &
+                        "[SRRE Rating Number] = '4' " & whereClause & ";"
+                    combinedSQLs.Add(sql2)
+                End If
+
+                ' ---- Execute All Queries ----
+                For Each sql As String In combinedSQLs
+                    Using cmd As New OleDbCommand(sql, conn)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                Next
+
+            Catch ex As OleDbException
+                Console.WriteLine("OleDb Database Error: " & ex.Message)
+            Catch ex As Exception
+                Console.WriteLine("General Error: " & ex.Message)
+            End Try
+        End Using
+    End Sub
+
 
 End Module

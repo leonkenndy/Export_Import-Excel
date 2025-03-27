@@ -13,7 +13,7 @@ Imports ADOX
 Module Module1
     Sub Main()
         Dim excelPath As String = "C:\Users\manik\Downloads\ME Holdings File - 2024-11-30 - Skyridge.xlsx"
-        Dim dbPath As String = "D:\ME Holdings.accdb"
+        Dim dbPath As String = "D:\BRC.accdb"
         Dim excelReportPath As String = "D:\ME_Holdings.xlsx"
 
         ' Create Access DB if not exists
@@ -59,101 +59,14 @@ Module Module1
         Dim primaryIDList2 As New List(Of String) From {"68295@AA7U", "35116@AA3U", "35092*AA3U", "81800*AA0U", "81786@AA8U", "16325#AA8U", "19418@AA2U", "74744#AA0U", "90282*AA8U"}
         Updatepacwest(dbPath, tableName, primaryIDList1, primaryIDList2)
 
-        'Report generation to a blank file I'll make it optional 
-
-        'Make report in Excel
-
-        '        IG Corp Public 
-        'D16 -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = Corp Sec Public
-        'SRRe IG = IG
-        'As of Date = ME_Holding_File date
-
-        'IG Corp Non Public
-        'D17 -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = Corp Sec Private
-        'SRRe IG = IG
-        'Date = ME_Holding_File Date
-        'D15 = D16 + D17
-
-        '        IG Corp Public 
-        'D20 -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = Corp Sec Public
-        'SRRe IG = BIG
-        'Date = ME_Holding_File Date
-
-        'IG Corp Non Public
-        'D21 -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = Corp Sec Private
-        'SRRe IG = BIG
-        'Date = ME_Holding_File Date
-        'D19 = D20 + D21
-
-
-        '        Column E Is with port code as OC 
-        'D21 -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = OC
-        'SRRe Asset Type = Corp Sec Private
-        'SRRe IG = BIG
-        'Date = ME_Holding_File Date
-        'D19 = D20 + D21
-
-
-        '        IG CLOs 
-
-        ' -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = CLO
-        'SRRe IG = IG
-        'Date = ME_Holding_File Date
-
-        'Non IG CLOs 
-
-        ' -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = CLO
-        'SRRe IG = BIG
-        'Date = ME_Holding_File Date
-
-        'CLOS -> Sum of Stat Carry Value 4 Condition 
-        'when 
-        'SRRe Port Code = FWH
-        'SRRe Asset Type = CLO
-        'Date = ME_Holding_File Date
-
-
-        'Dont Check SRRe IG for 
-        'Commercial paper 
-        'Collateral loans 
-        'syndicated bank loans 
-        'ABS
-        '        CMBS
-        '        RMBS
-        '        Direct Investments 
-        'Preferred Stock 
-
-
-        'Accrued Interest 
-        'Add them based on 
-        'ME_holding files date
-        'FWH/ OC 
-
         Dim report As New ReportGenerator(dbPath, tableName, excelReportPath, formattedDate)
-        report.GenerateReportFWH()
-        'report.GenerateReportOC()
+        report.GenerateReport()
+        report.GenerateBMA_TPReport()
         Console.WriteLine("Data import completed successfully!")
-        Console.ReadLine()
+        Console.WriteLine("Exiting!")
+        Console.WriteLine("Exiting!")
+
+        'Console.ReadLine()
     End Sub
 
     ' Function to Create a New Access Database (Empty File)

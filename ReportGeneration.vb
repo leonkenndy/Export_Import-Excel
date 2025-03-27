@@ -1,6 +1,8 @@
 ﻿Imports System.Data.OleDb
 Imports ClosedXML.Excel
-
+Imports System.IO
+Imports System.Text.RegularExpressions
+Imports System.Globalization
 Public Class ReportGenerator
     Private dbPath As String
     Private tableName As String
@@ -18,7 +20,7 @@ Public Class ReportGenerator
 
     End Sub
 
-    Public Sub GenerateReportFWH()
+    Public Sub GenerateReport()
         Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
         Dim dataTable As New DataTable()
 
@@ -250,7 +252,7 @@ Public Class ReportGenerator
         Dim cashEquivalentPreQssa = dataTable.AsEnumerable().Where(Function(r) r.Field(Of String)("SRRe Port Code") = "FWH" AndAlso
                                                              r.Field(Of String)("SRRe Asset Type") = "Commercial Paper").Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Stat Carry Value"))))
 
-        ws.Cell(rowIndex, 1).Value = "Cash and Equivalents - Pre-QSSA"
+        ws.Cell(rowIndex, 1).Value = "Cash and Equivalents - Pre-QSSA(IGNORE)"
         ws.Cell(rowIndex, 2).Value = cashEquivalentPreQssa
         rowIndex += 1
 
@@ -258,7 +260,7 @@ Public Class ReportGenerator
         Dim cashEquivalent = dataTable.AsEnumerable().Where(Function(r) r.Field(Of String)("SRRe Port Code") = "FWH" AndAlso
                                                              r.Field(Of String)("SRRe Asset Type") = "Commercial Paper").Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Stat Carry Value"))))
 
-        ws.Cell(rowIndex, 1).Value = "Cash and Equivalents"
+        ws.Cell(rowIndex, 1).Value = "Cash and Equivalents(IGNORE)"
         ws.Cell(rowIndex, 2).Value = cashEquivalent
         rowIndex += 1
 
@@ -526,33 +528,334 @@ Public Class ReportGenerator
 
         '------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ' FWH Plus OC Totals 
+        ws.Cell(++rowIndex, 1).Value = "Totals FWH + OC"
+        rowIndex += 1
 
-        Dim TOTAL_Cash_and_Equivalents As Integer = cashEquivalent + cashEquivalentOC
-        Dim TOTAL_Cash_Equivalent_ As Integer = cashEquivalentPreQssa + cashEquivalentPreQssaOC
-        Dim TOTAL_commercialPaper As Integer = commercialPaper + commercialPaperOC
-        Dim TOTAL_directInvestments As Integer = directInvestments + directInvestmentsOC
-        Dim TOTAL_igCorpPublicSum As Integer = igCorpPublicSum + igCorpPublicSumOC
+        Dim totalCashAndEquivalents As Integer = cashEquivalent + cashEquivalentOC
+        ws.Cell(rowIndex, 1).Value = "Cash and Equivalents"
+        ws.Cell(rowIndex, 2).Value = totalCashAndEquivalents
+        rowIndex += 1
 
-        Dim TOTAL_igCorpSumOC As Integer = igCorpSumOC + igCorpSum
-        Dim TOTAL_igCorpNonPublicSum As Integer = igCorpNonPublicSum + igCorpNonPublicSumOC
+        Dim totalCashEquivalentPreQssa As Integer = cashEquivalentPreQssa + cashEquivalentPreQssaOC
+        ws.Cell(rowIndex, 1).Value = "Cash Equivalent Pre-QSSA"
+        ws.Cell(rowIndex, 2).Value = totalCashEquivalentPreQssa
+        rowIndex += 1
 
-        Dim TOTAL_bigCorpSum As Integer = bigCorpSum + bigCorpSumOC
-        Dim TOTAL_nonigcml As Integer = nonigcml + nonigcmlOC
+        Dim totalCommercialPaper As Integer = commercialPaper + commercialPaperOC
+        ws.Cell(rowIndex, 1).Value = "Commercial Paper"
+        ws.Cell(rowIndex, 2).Value = totalCommercialPaper
+        rowIndex += 1
 
-        Dim TOTAL_nonIGCorpNonPublicSum As Integer = nonIGCorpNonPublicSum + nonIGCorpNonPublicSumOC
-        Dim TOTAL_nonIGCorpPublicSum As Integer = nonIGCorpPublicSum + nonIGCorpPublicSumOC
-        Dim TOTAL_NonIGCLOs As Integer = NonIGCLOs + NonIGCLOsOC
-        Dim TOTAL_collateral_loans As Integer = collateral_loans + collateral_loansOC
-        Dim TOTAL_syndicated_bank_loans As Integer = syndicated_bank_loans + syndicated_bank_loansOC
-        Dim TOTAL_igcmls As Integer = igcmls + igcmlsOC
-        Dim TOTAL_totalcmls As Integer = totalcmls + totalcmlsOC
-        Dim TOTAL_othersStructureAssets As Integer = othersStructureAssets + othersStructureAssetsOC
-        Dim TOTAL_others As Integer = others + othersOC
-        Dim TOTAL_preferredStock As Integer = preferredStock + preferredStockOC
+        Dim totalDirectInvestments As Integer = directInvestments + directInvestmentsOC
+        ws.Cell(rowIndex, 1).Value = "Direct Investments"
+        ws.Cell(rowIndex, 2).Value = totalDirectInvestments
+        rowIndex += 1
+
+        Dim totalIgCorpPublicSum As Integer = igCorpPublicSum + igCorpPublicSumOC
+        ws.Cell(rowIndex, 1).Value = "IG Corporate Public Sum"
+        ws.Cell(rowIndex, 2).Value = totalIgCorpPublicSum
+        rowIndex += 1
+
+        Dim totalIgCorpSum As Integer = igCorpSum + igCorpSumOC
+        ws.Cell(rowIndex, 1).Value = "IG Corporate Sum"
+        ws.Cell(rowIndex, 2).Value = totalIgCorpSum
+        rowIndex += 1
+
+        Dim totalIgCorpNonPublicSum As Integer = igCorpNonPublicSum + igCorpNonPublicSumOC
+        ws.Cell(rowIndex, 1).Value = "IG Corporate Non-Public Sum"
+        ws.Cell(rowIndex, 2).Value = totalIgCorpNonPublicSum
+        rowIndex += 1
+
+        Dim totalBigCorpSum As Integer = bigCorpSum + bigCorpSumOC
+        ws.Cell(rowIndex, 1).Value = "Big Corporate Sum"
+        ws.Cell(rowIndex, 2).Value = totalBigCorpSum
+        rowIndex += 1
+
+        Dim totalNonIgCml As Integer = nonigcml + nonigcmlOC
+        ws.Cell(rowIndex, 1).Value = "Non-IG CML"
+        ws.Cell(rowIndex, 2).Value = totalNonIgCml
+        rowIndex += 1
+
+        Dim totalNonIgCorpNonPublicSum As Integer = nonIGCorpNonPublicSum + nonIGCorpNonPublicSumOC
+        ws.Cell(rowIndex, 1).Value = "Non-IG Corporate Non-Public Sum"
+        ws.Cell(rowIndex, 2).Value = totalNonIgCorpNonPublicSum
+        rowIndex += 1
+
+        Dim totalNonIgCorpPublicSum As Integer = nonIGCorpPublicSum + nonIGCorpPublicSumOC
+        ws.Cell(rowIndex, 1).Value = "Non-IG Corporate Public Sum"
+        ws.Cell(rowIndex, 2).Value = totalNonIgCorpPublicSum
+        rowIndex += 1
+
+        Dim totalNonIgCLOs As Integer = NonIGCLOs + NonIGCLOsOC
+        ws.Cell(rowIndex, 1).Value = "Non-IG CLOs"
+        ws.Cell(rowIndex, 2).Value = totalNonIgCLOs
+        rowIndex += 1
+
+        Dim totalCollateralLoans As Integer = collateral_loans + collateral_loansOC
+        ws.Cell(rowIndex, 1).Value = "Collateral Loans"
+        ws.Cell(rowIndex, 2).Value = totalCollateralLoans
+        rowIndex += 1
+
+        Dim totalSyndicatedBankLoans As Integer = syndicated_bank_loans + syndicated_bank_loansOC
+        ws.Cell(rowIndex, 1).Value = "Syndicated Bank Loans"
+        ws.Cell(rowIndex, 2).Value = totalSyndicatedBankLoans
+        rowIndex += 1
+
+        Dim totalIgCmls As Integer = igcmls + igcmlsOC
+        ws.Cell(rowIndex, 1).Value = "IG CMLs"
+        ws.Cell(rowIndex, 2).Value = totalIgCmls
+        rowIndex += 1
+
+        Dim totalCmlssum As Integer = totalcmls + totalcmlsOC
+        ws.Cell(rowIndex, 1).Value = "Total CMLs"
+        ws.Cell(rowIndex, 2).Value = totalCmlssum
+        rowIndex += 1
+
+        Dim totalOtherStructuredAssets As Integer = othersStructureAssets + othersStructureAssetsOC
+        ws.Cell(rowIndex, 1).Value = "Other Structured Assets"
+        ws.Cell(rowIndex, 2).Value = totalOtherStructuredAssets
+        rowIndex += 1
+
+        Dim totalOthers As Integer = others + othersOC
+        ws.Cell(rowIndex, 1).Value = "Others"
+        ws.Cell(rowIndex, 2).Value = totalOthers
+        rowIndex += 1
+
+        Dim totalPreferredStock As Integer = preferredStock + preferredStockOC
+        ws.Cell(rowIndex, 1).Value = "Preferred Stock"
+        ws.Cell(rowIndex, 2).Value = totalPreferredStock
+        rowIndex += 1
         '------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ' Accrued Interest 
 
-        wb.SaveAs(outputPath)
+        Dim Accrued_InterestFWH = dataTable.AsEnumerable().Where(Function(r) r.Field(Of String)("SRRe Port Code") = "FWH" AndAlso
+                                                             r.Field(Of String)("As Of Date") = asofdate).Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Accrued Interest"))))
+
+        ws.Cell(rowIndex, 1).Value = "Accrued Interest FWH"
+        ws.Cell(rowIndex, 2).Value = Accrued_InterestFWH
+        rowIndex += 1
+
+        Dim Accrued_InterestOC = dataTable.AsEnumerable().Where(Function(r) r.Field(Of String)("SRRe Port Code") = "OC" AndAlso
+                                                             r.Field(Of String)("As Of Date") = asofdate).Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Accrued Interest"))))
+
+        ws.Cell(rowIndex, 1).Value = "Accrued Interest OC"
+        ws.Cell(rowIndex, 2).Value = Accrued_InterestOC
+        rowIndex += 1
+
+        '----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        'Total Percentage
+        ' Function to calculate and insert percentage in Excel
+        ' Calculate Grand Total
+        Dim grandTotal As Integer = totalCashAndEquivalents + totalCashEquivalentPreQssa + totalCommercialPaper +
+                            totalDirectInvestments + totalIgCorpPublicSum + totalIgCorpSum +
+                            totalIgCorpNonPublicSum + totalBigCorpSum + totalNonIgCml +
+                            totalNonIgCorpNonPublicSum + totalNonIgCorpPublicSum + totalNonIgCLOs +
+                            totalCollateralLoans + totalSyndicatedBankLoans + totalIgCmls +
+                            totalCmlssum + totalOtherStructuredAssets + totalOthers + totalPreferredStock
+
+        ' Store Grand Total in Excel
+        ws.Cell(rowIndex, 1).Value = "Grand Total"
+        ws.Cell(rowIndex, 2).Value = grandTotal
+        rowIndex += 1
+
+        ws.Cell(rowIndex, 1).Value = "Total %"
+        rowIndex += 1
+        ' Insert percentages for each category
+        InsertPercentage("Cash and Equivalents", totalCashAndEquivalents, grandTotal)
+        InsertPercentage("Cash Equivalent Pre-QSSA", totalCashEquivalentPreQssa, grandTotal)
+        InsertPercentage("Commercial Paper", totalCommercialPaper, grandTotal)
+        InsertPercentage("Direct Investments", totalDirectInvestments, grandTotal)
+        InsertPercentage("IG Corporate Public Sum", totalIgCorpPublicSum, grandTotal)
+        InsertPercentage("IG Corporate Sum", totalIgCorpSum, grandTotal)
+        InsertPercentage("IG Corporate Non-Public Sum", totalIgCorpNonPublicSum, grandTotal)
+        InsertPercentage("Big Corporate Sum", totalBigCorpSum, grandTotal)
+        InsertPercentage("Non-IG CML", totalNonIgCml, grandTotal)
+        InsertPercentage("Non-IG Corporate Non-Public Sum", totalNonIgCorpNonPublicSum, grandTotal)
+        InsertPercentage("Non-IG Corporate Public Sum", totalNonIgCorpPublicSum, grandTotal)
+        InsertPercentage("Non-IG CLOs", totalNonIgCLOs, grandTotal)
+        InsertPercentage("Collateral Loans", totalCollateralLoans, grandTotal)
+        InsertPercentage("Syndicated Bank Loans", totalSyndicatedBankLoans, grandTotal)
+        InsertPercentage("IG CMLs", totalIgCmls, grandTotal)
+        InsertPercentage("Total CMLs", totalCmlssum, grandTotal)
+        InsertPercentage("Other Structured Assets", totalOtherStructuredAssets, grandTotal)
+        InsertPercentage("Others", totalOthers, grandTotal)
+        InsertPercentage("Preferred Stock", totalPreferredStock, grandTotal)
+        ' Extract the directory path
+        Dim directoryPath As String = Path.GetDirectoryName(outputPath)
+        Dim match As Match = Regex.Match(asofdate, "\d{1,2}/\d{1,2}/\d{4}")
+        Dim extractedDate As String = If(match.Success, match.Value, "Date not found")
+        Dim newFileName As String = ""
+        If extractedDate <> "Date not found" Then
+            ' Parse the date using CultureInfo
+            Dim parsedDate As DateTime = DateTime.ParseExact(extractedDate, "M/d/yyyy", CultureInfo.InvariantCulture)
+
+            ' Format to MM_dd_yyyy
+            Dim formattedDate As String = parsedDate.ToString("MM_dd_yyyy")
+
+            ' Create the new filename
+            newFileName = "D:\ME_Holdings " & formattedDate & ".xlsx"
+
+            Console.WriteLine(newFileName) ' Output: D:\BMA_TP11_30_2024.xlsx
+        Else
+            Console.WriteLine("Invalid date format.")
+        End If
+
+
+        wb.SaveAs(newFileName)
+        Console.WriteLine("Report generated at: " & newFileName)
+
+    End Sub
+
+    Sub GenerateBMA_TPReport()
+        '-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        'BMA TP Report 
+
+        ' Define the list of SRRe Asset Types
+        Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
+        Dim dataTable As New DataTable()
+        Using conn As New OleDbConnection(connectionString)
+            conn.Open()
+
+            ' Query all required data
+            Dim query As String = "SELECT * FROM [" & tableName & "] WHERE [As of Date] = ?"
+
+            Using cmd As New OleDbCommand(query, conn)
+                ' Add parameter to avoid SQL injection and formatting issues
+                cmd.Parameters.AddWithValue("@asofdate", asofdate)
+
+                Using reader As OleDbDataReader = cmd.ExecuteReader()
+                    dataTable.Load(reader)
+                End Using
+            End Using
+        End Using
+
+        Dim wbBMA As New XLWorkbook()
+        Dim wsBMA = wbBMA.Worksheets.Add("Report BMA TP")
+
+        ' Example Header
+        wsBMA.Cell(1, 1).Value = "Summary Report BMA TP"
+        wsBMA.Cell(2, 1).Value = "Generated On"
+        wsBMA.Cell(2, 2).Value = DateTime.Now.ToString("yyyy-MM-dd")
+        wsBMA.Cell(2, 3).Value = "ME Holdings As of Date"
+        wsBMA.Cell(2, 4).Value = asofdate
+        ' Example Calculations
+        Dim rowIndexBMA = 4
+        ' Total Investment-Grade Corporate
+        Dim srreAssetTypes As New List(Of String) From {
+                                                            "ABS",
+                                                            "Bank Deposit",
+                                                            "CLO",
+                                                            "CMBS",
+                                                            "Collateral Loans",
+                                                            "Commercial Mortgage Loans",
+                                                            "Commercial Paper",
+                                                            "Corp Sec 144a",
+                                                            "Corp Sec Private",
+                                                            "Corp Sec Public",
+                                                            "Syndicated Bank Loans"
+                                                        }
+
+        ' Loop through each asset type 
+        'FWH 'IG
+        For Each assetType As String In srreAssetTypes
+            ' Calculate Accrued Interest and Market Value Sum for the current asset type
+            Dim accruedInterestMarketValueSum As Decimal = dataTable.AsEnumerable().Where(Function(r) r.Field(Of String)("SRRe Asset Funding") = "Funded" AndAlso
+                          r.Field(Of String)("SRRe Port Code") = "FWH" AndAlso
+                          r.Field(Of String)("SRRe Asset Type") = assetType AndAlso
+                          r.Field(Of String)("SRRe IG") = "IG" AndAlso
+                          r.Field(Of String)("As Of Date") = asofdate).
+        Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Accrued Interest"))) +
+                       Convert.ToDecimal(Convert.ToDouble(r("Market Value"))))
+
+            ' Write results to Excel
+            wsBMA.Cell(rowIndexBMA, 1).Value = "Accrued Interest & Market Value FWH - " & assetType
+            wsBMA.Cell(rowIndexBMA, 2).Value = accruedInterestMarketValueSum
+            rowIndexBMA += 1
+        Next
+        'BIG
+        For Each assetType As String In srreAssetTypes
+            ' Calculate Accrued Interest and Market Value Sum for the current asset type
+            Dim accruedInterestMarketValueSum As Decimal = dataTable.AsEnumerable().
+        Where(Function(r) r.Field(Of String)("SRRe Asset Funding") = "Funded" AndAlso
+                          r.Field(Of String)("SRRe Port Code") = "FWH" AndAlso
+                          r.Field(Of String)("SRRe Asset Type") = assetType AndAlso
+                          r.Field(Of String)("SRRe IG") = "BIG" AndAlso
+                          r.Field(Of String)("As Of Date") = asofdate).
+        Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Accrued Interest"))) +
+                       Convert.ToDecimal(Convert.ToDouble(r("Market Value"))))
+
+            ' Write results to Excel
+            wsBMA.Cell(rowIndexBMA, 1).Value = "Accrued Interest & Market Value FWH - " & assetType
+            wsBMA.Cell(rowIndexBMA, 2).Value = accruedInterestMarketValueSum
+            rowIndexBMA += 1
+        Next
+        'OC
+
+        For Each assetType As String In srreAssetTypes
+            ' Calculate Accrued Interest and Market Value Sum for the current asset type
+            Dim accruedInterestMarketValueSum As Decimal = dataTable.AsEnumerable().
+        Where(Function(r) r.Field(Of String)("SRRe Asset Funding") = "Funded" AndAlso
+                          r.Field(Of String)("SRRe Port Code") = "OC" AndAlso
+                          r.Field(Of String)("SRRe Asset Type") = assetType AndAlso
+                           r.Field(Of String)("SRRe IG") = "IG" AndAlso
+                          r.Field(Of String)("As Of Date") = asofdate).
+        Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Accrued Interest"))) +
+                       Convert.ToDecimal(Convert.ToDouble(r("Market Value"))))
+
+            ' Write results to Excel
+            wsBMA.Cell(rowIndexBMA, 1).Value = "Accrued Interest & Market Value OC - " & assetType
+            wsBMA.Cell(rowIndexBMA, 2).Value = accruedInterestMarketValueSum
+            rowIndexBMA += 1
+        Next
+        'BIG
+        For Each assetType As String In srreAssetTypes
+            ' Calculate Accrued Interest and Market Value Sum for the current asset type
+            Dim accruedInterestMarketValueSum As Decimal = dataTable.AsEnumerable().
+        Where(Function(r) r.Field(Of String)("SRRe Asset Funding") = "Funded" AndAlso
+                          r.Field(Of String)("SRRe Port Code") = "OC" AndAlso
+                          r.Field(Of String)("SRRe Asset Type") = assetType AndAlso
+                           r.Field(Of String)("SRRe IG") = "BIG" AndAlso
+                          r.Field(Of String)("As Of Date") = asofdate).
+        Sum(Function(r) Convert.ToDecimal(Convert.ToDouble(r("Accrued Interest"))) +
+                       Convert.ToDecimal(Convert.ToDouble(r("Market Value"))))
+
+            ' Write results to Excel
+            wsBMA.Cell(rowIndexBMA, 1).Value = "Accrued Interest & Market Value OC - " & assetType
+            wsBMA.Cell(rowIndexBMA, 2).Value = accruedInterestMarketValueSum
+            rowIndexBMA += 1
+        Next
+        ' Extract the directory path
+        Dim directoryPath As String = Path.GetDirectoryName(outputPath)
+        Dim match As Match = Regex.Match(asofdate, "\d{1,2}/\d{1,2}/\d{4}")
+        Dim extractedDate As String = If(match.Success, match.Value, "Date not found")
+        Dim newFileName As String = ""
+        If extractedDate <> "Date not found" Then
+            ' Parse the date using CultureInfo
+            Dim parsedDate As DateTime = DateTime.ParseExact(extractedDate, "M/d/yyyy", CultureInfo.InvariantCulture)
+
+            ' Format to MM_dd_yyyy
+            Dim formattedDate As String = parsedDate.ToString("MM_dd_yyyy")
+
+            ' Create the new filename
+            newFileName = "D:\BMA_TP " & formattedDate & ".xlsx"
+
+            Console.WriteLine(newFileName) ' Output: D:\BMA_TP11_30_2024.xlsx
+        Else
+            Console.WriteLine("Invalid date format.")
+        End If
+
+        ' Combine directory path with the new filename
+        'Dim newFilePath As String = Path.Combine(directoryPath, newFileName)
+
+        Console.WriteLine(newFileName)
+
+        wbBMA.SaveAs(newFileName)
         Console.WriteLine("Report generated at: " & outputPath)
+    End Sub
+    Sub InsertPercentage(ByVal categoryName As String, ByVal categoryTotal As Integer, ByVal grandTotal As Integer)
+        Dim percentage As Double = If(grandTotal > 0, (categoryTotal / grandTotal) * 100, 0)
+        ws.Cell(rowIndex, 1).Value = categoryName & " (%)"
+        ws.Cell(rowIndex, 2).Value = Math.Round(percentage, 2) & "%" ' Round to 2 decimal places
+        rowIndex += 1
     End Sub
 End Class

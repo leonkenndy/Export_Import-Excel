@@ -12,9 +12,16 @@ Imports ADOX
 
 Module Module1
     Sub Main()
-        Dim excelPath As String = "C:\Users\manik\Downloads\ME Holdings File - 2024-11-30 - Skyridge.xlsx"
-        Dim dbPath As String = "D:\BRC.accdb"
-        Dim excelReportPath As String = "D:\ME_Holdings.xlsx"
+
+        'Chris and Richard code 
+        Dim excelPath As String = "C:\Users\WuChristopher\OneDrive - Eldridge Business Services\Documents - 2.2 Investments Committee\Security Benefit Reports\ME Holdings File - 2023-12-31 - Skyridge.xlsx"
+        Dim dbPath As String = "C:\Users\WuChristopher\OneDrive - Eldridge Business Services\Documents - 2.2 Investments Committee\Technology\Database\BRC.accdb"
+        Dim excelReportPath As String = "C:\Users\WuChristopher\OneDrive - Eldridge Business Services\Documents - 2.2 Investments Committee\Technology\output"
+
+        'Manik Code
+        'Dim excelPath As String = "C:\Users\manik\Downloads\ME Holdings File - 2024-11-30 - Skyridge.xlsx"
+        'Dim dbPath As String = "D:\BRC.accdb"
+        'Dim excelReportPath As String = "D:\ME_Holdings.xlsx"
 
         ' Create Access DB if not exists
         If Not File.Exists(dbPath) Then
@@ -47,7 +54,8 @@ Module Module1
                                                         "SRRe Rating Letter",
                                                         "SRRe IG",
                                                         "SRRe Rating Number",
-                                                        "SRRe Port Code"
+                                                        "SRRe Port Code",
+                                                        "SRRe Coupon Type"
                                                         }
 
         AddColumnsToAccessTable(dbPath, tableName, columnsToAdd)
@@ -58,10 +66,12 @@ Module Module1
         Dim primaryIDList1 As New List(Of String) From {"68295@AA7", "35116@AA3", "35092*AA3", "81800*AA0", "81786*AA8", "16325#AA8", "19418@AA2", "74744#AA0", "90282*AA8"}
         Dim primaryIDList2 As New List(Of String) From {"68295@AA7U", "35116@AA3U", "35092*AA3U", "81800*AA0U", "81786@AA8U", "16325#AA8U", "19418@AA2U", "74744#AA0U", "90282*AA8U"}
         Updatepacwest(dbPath, tableName, primaryIDList1, primaryIDList2)
-
+        UpdateEganJones(dbPath, tableName)
         Dim report As New ReportGenerator(dbPath, tableName, excelReportPath, formattedDate)
         report.GenerateReport()
         report.GenerateBMA_TPReport()
+        report.GenerateFinancialSummaryReport()
+
         Console.WriteLine("Data import completed successfully!")
         Console.WriteLine("Exiting!")
         Console.WriteLine("Exiting!")
@@ -378,8 +388,11 @@ Module Module1
                                "Trim([Port Code])= '823' , 'OC' " &
                                ") " &
                                "WHERE [" & columnName & "] IS NULL OR [Port Code] IS NOT NULL;"
+                    ElseIf columnName = "SRRe Coupon Type" Then
+                        sql = "UPDATE [" & tableName & "] " &
+                               "SET [" & columnName & "] = [Coupon Type]" &
+                               "WHERE [" & columnName & "] IS NULL AND [As Of Date] IS NOT NULL;"
                     End If
-
 
                     ' Execute only if SQL is not empty
                     If sql <> "" Then
@@ -467,5 +480,60 @@ Module Module1
         End Using
     End Sub
 
+
+    Public Sub UpdateEganJones(ByVal dbPath As String, ByVal tableName As String)
+        Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
+
+        Using conn As New OleDbConnection(connectionString)
+            Try
+                conn.Open()
+
+                Dim combinedSQLs As New List(Of String)()
+
+
+                Dim whereClause As String
+                whereClause = "WHERE ([EganJones] IS NOT NULL AND [EganJones] <> '-') AND [SRRe Asset Type] = 'CLO'"
+
+                Dim EganJonessqlQuery As String
+                EganJonessqlQuery = "UPDATE [" & tableName & "] " &
+                           "SET [SRRe Asset Type] = 'Corp Sec Private' " &
+                           whereClause
+                ' "[Coupon Type] = 'Coupon Type' " &  ' SRRe Coupon Type'
+
+
+                combinedSQLs.Add(EganJonessqlQuery)
+                ' Move below code to sperate sub routine called updatecouponType
+                Dim sqlQueryFloating As String
+                Dim sqlQueryFixed As String
+
+                ' Query to update S.Coupon Type to Floating
+                sqlQueryFloating = "UPDATE [" & tableName & "] " &
+                   "SET [SRRe Coupon Type] = 'Floating' " &
+                   "WHERE [SRRe Coupon Type] = 'Adjustable' " &
+                   "AND [Asset Type] IN ('CLO', 'IG Corp Non Public', 'Non-IG Corp Non Public');"
+
+                combinedSQLs.Add(sqlQueryFloating)
+                ' Query to update S.Coupon Type to Fixed
+                sqlQueryFixed = "UPDATE [" & tableName & "] " &
+                "SET [SRRe Coupon Type] = 'Fixed' " &
+                "WHERE [SRRe Coupon Type] = 'Adjustable' " &
+                "AND [Asset Type] IN ('IG Corp Public', 'CMBS', 'Preferred Stock');"
+                combinedSQLs.Add(sqlQueryFixed)
+                ' ---- Execute All Queries ----
+                For Each sql As String In combinedSQLs
+                    Using cmd As New OleDbCommand(sql, conn)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                Next
+
+            Catch ex As OleDbException
+                Console.WriteLine("OleDb Database Error: " & ex.Message)
+            Catch ex As Exception
+                Console.WriteLine("General Error: " & ex.Message)
+            End Try
+        End Using
+    End Sub
+
+    ' Sub updatecouponType(ByVal dbPath As String, ByVal tableName As String)
 
 End Module

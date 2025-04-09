@@ -69,8 +69,13 @@ Module Module1
         UpdateEganJones(dbPath, tableName)
         UpdateCouponType(dbPath, tableName)
         Dim report As New ReportGenerator(dbPath, tableName, excelReportPath, formattedDate)
-        report.GenerateReport()
-        report.GenerateBMA_TPReport()
+        Dim assetAllocations As New AssetAllocationsReport(dbPath, tableName, excelReportPath, formattedDate)
+        Dim BMA_TP As New BMA_TPReport(dbPath, tableName, excelReportPath, formattedDate)
+        assetAllocations.GenerateReport()
+        BMA_TP.GenerateReport()
+
+        'report.GenerateReport()
+        'report.GenerateBMA_TPReport()
         report.GenerateFinancialSummaryReport()
         report.GenerateInvestmentReturnReport()
 

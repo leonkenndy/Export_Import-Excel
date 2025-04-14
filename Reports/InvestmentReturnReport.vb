@@ -1,24 +1,19 @@
-﻿Imports System.Data.OleDb
-Imports ClosedXML.Excel
+﻿Imports ClosedXML.Excel
 Imports System.IO
 Imports System.Text.RegularExpressions
 Imports System.Globalization
-Imports DocumentFormat.OpenXml.Spreadsheet
-Imports System.ComponentModel
+
 Public Class InvestmentReturnReport
 
     Private dbPath As String
     Private tableName As String
     Private outputPath As String
     Private asofdate As String
-    Private rowIndex As Integer
-
     Public Sub New(ByVal dbPath As String, ByVal tableName As String, ByVal outputPath As String, ByVal asofdate As String)
         Me.dbPath = dbPath
         Me.tableName = tableName
         Me.outputPath = outputPath
         Me.asofdate = asofdate
-        Me.rowIndex = 0
 
     End Sub
     Sub GenerateInvestmentReturnReport()
@@ -62,12 +57,7 @@ Public Class InvestmentReturnReport
             ' Create a list of lists to store the results
             Dim resultMap As New Dictionary(Of String, List(Of String))()
 
-            ' Create a connection to the database
-
-
             Try
-
-                ' Run each query and store the results in the dictionary
                 resultMap("SRRe_Asset_Funding") = ExecuteQuery(conn, SRRe_Asset_Fundingquery)
                 resultMap("Coupon_Type") = ExecuteQuery(conn, Coupon_Type_query)
                 resultMap("SRRe_Rating") = ExecuteQuery(conn, SRRe_Rating_query)
@@ -86,7 +76,7 @@ Public Class InvestmentReturnReport
 
                             ' Filter the data with specific conditions
                             Dim accruedInterestMarketValueSum As Decimal = dataTable.AsEnumerable().Where(Function(r) r.Field(Of String)("SRRe Asset Funding") = fundingType AndAlso
-                                                                                                 r.Field(Of String)("Coupon Type") = couponType AndAlso
+                                                                                                 r.Field(Of String)("SRRe Coupon Type") = couponType AndAlso
                                                                                                  r.Field(Of String)("SRRe Asset Category") = assetCategory AndAlso
                                                                                                  r.Field(Of String)("SRRe Rating Number") = ratingNumber AndAlso
                                                                                                  r.Field(Of String)("As Of Date") = asofdate
@@ -130,9 +120,6 @@ Public Class InvestmentReturnReport
             Else
                 Console.WriteLine("Invalid date format.")
             End If
-
-            ' Combine directory path with the new filename
-            'Dim newFilePath As String = Path.Combine(directoryPath, newFileName)
 
             Console.WriteLine(newFileName)
 

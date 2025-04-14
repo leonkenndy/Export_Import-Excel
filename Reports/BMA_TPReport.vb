@@ -1,11 +1,9 @@
 ﻿
-Imports System.Data.OleDb
 Imports ClosedXML.Excel
 Imports System.IO
 Imports System.Text.RegularExpressions
 Imports System.Globalization
-Imports DocumentFormat.OpenXml.Spreadsheet
-Imports System.ComponentModel
+
 Public Class BMA_TPReport
     Private dbPath As String
     Private tableName As String

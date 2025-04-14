@@ -16,7 +16,7 @@ Imports System.Reflection
 <Assembly: System.Reflection.AssemblyCompanyAttribute("ExportExcel"),  _
  Assembly: System.Reflection.AssemblyConfigurationAttribute("Debug"),  _
  Assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0"),  _
- Assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b904c6ffbe6e1b1880dbac0bdc9eaa9cfd23969c"),  _
+ Assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9bd5620bd4fe24c250f33451540025a8abd630d9"),  _
  Assembly: System.Reflection.AssemblyProductAttribute("ExportExcel"),  _
  Assembly: System.Reflection.AssemblyTitleAttribute("ExportExcel"),  _
  Assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")> 

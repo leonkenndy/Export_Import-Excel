@@ -21,7 +21,7 @@ Module Module1
         'Manik Code
         Dim excelPath As String = "C:\Users\manik\Downloads\ME Holdings File - 2024-11-30 - Skyridge.xlsx"
         Dim dbPath As String = "D:\BRC.accdb"
-        Dim excelReportPath As String = "D:\ME_Holdings.xlsx"
+        Dim excelReportPath As String = "D:\ExcelExport\ME_Holdings.xlsx"
 
         ' Create Access DB if not exists
         If Not File.Exists(dbPath) Then
@@ -548,7 +548,7 @@ Module Module1
                 sqlQueryFixed = "UPDATE [" & tableName & "] " &
                 "SET [SRRe Coupon Type] = 'Fixed' " &
                 "WHERE [SRRe Coupon Type] = 'Adjustable' " &
-                "AND [Asset Type] IN ('IG Corp Public', 'CMBS', 'Preferred Stock');"
+                "AND [Asset Type] IN ('IG Corp Public','Non-IG Corp Public', 'CMBS', 'Preferred Stock');"
                 combinedSQLs.Add(sqlQueryFixed)
                 For Each sql As String In combinedSQLs
                     Using cmd As New OleDbCommand(sql, conn)
